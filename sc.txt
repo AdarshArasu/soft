@@ -1,0 +1,497 @@
+#TSK
+
+  ## This example shows how to use frbs without
+  ## learning process.
+  ## Note: some variables might be shared for other examples.
+ 
+  ## Define shape and parameters of membership functions of input variables.
+  ## Please see fuzzifier function to contruct the matrix.
+  #install.packages("frbs")
+  library("frbs")
+  # 1 is traingle, 4 is trap, nrow leave
+  varinp.mf <- matrix(c(1, 1000, 1200, 1400, NA,
+                        1, 1200, 1600, 1800, NA,
+                        1, 2.5, 5, 7.5, NA,
+                        1, 6, 10, 14, NA
+                        ),
+                      nrow = 5, byrow = FALSE)
+ 
+  ## Define number of fuzzy terms of input variables.
+  ## Suppose, we have 3, 2, 3, and 3 numbers of fuzzy terms
+  ## for first, second, third and fourth variables, respectively.
+ 
+  # 2 input for variable 1 and 2 input for variable 2 , nrow leave
+  num.fvalinput <- matrix(c(2, 2), nrow=1)
+ 
+  ## Give the names of the fuzzy terms of each input variable.
+  ## It should be noted that the names of the fuzzy terms must be unique,
+  ## so we put a number for making it unique.
+ 
+  # name for variables
+  varinput.1 <- c("asmall", "alarge")
+  varinput.2 <- c("bsmall", "blarge")
+ 
+  names.varinput <- c(varinput.1, varinput.2)
+ 
+  ## Set interval of data. var1 range, var2 range, output range
+  range.data <- matrix(c(1000,1800, 0, 14, 0,6000), nrow=2)
+ 
+  ## Set weighted average method to be used as defuzzification method.
+  type.defuz <- "WAM"
+  ## We are using standard t-norm and s-norm.
+  type.tnorm <- "MIN"
+  type.snorm <- "MAX"
+  type.implication.func <- "ZADEH"
+ 
+  ## Give the name of simulation.
+  name <- "Sim-0"
+ 
+  ## Provide new data for testing.
+ 
+  # given input
+  newdata<- matrix(c(1300, 6.5), nrow= 1, byrow = TRUE)
+  ## the names of variables
+  colnames.var <- c("input1", "input2", "output1")
+ 
+  #####################################################################
+  ## 1b. Using Takagi Sugeno Kang (TSK) Model
+  #####################################################################
+ 
+  type.model <- "TSK"
+ 
+  ## Define function of TSK
+  # nrow is no of rules, au is large formula, au is small formula, au is large formula
+  func.tsk<-matrix(c(4.692, -526.2, 2631,
+                     3.4765, -210.5, 2103,
+                     4.692, -526.2, 2631), nrow=3, byrow=TRUE)
+ 
+  ## Define the fuzzy IF-THEN rules;
+  ## For TSK model, it isn't necessary to put linguistic term in consequent parts.
+  ## Make sure that each rule has a "->" sign.
+ 
+  #nrow is number of rules
+  rule <- matrix(c("alarge","and","bsmall","->",
+                   "asmall","or","blarge", "->",  
+                   "asmall","and","bsmall","->"),
+                 nrow=3, byrow=TRUE)
+ 
+  ## Generate a fuzzy model with frbs.gen.
+  ## It should be noted that for TSK model, we do not need to input:
+  ## num.fvaloutput, varout.mf, names.varoutput, type.defuz.
+  ##
+  object <- frbs.gen(range.data, num.fvalinput, names.varinput, num.fvaloutput = NULL,
+                     varout.mf = NULL, names.varoutput = NULL, rule,
+                     varinp.mf, type.model, type.defuz = NULL, type.tnorm, type.snorm, func.tsk, colnames.var,
+                     type.implication.func, name)
+ 
+  ## We can plot the membership function
+  plotMF(object)
+ 
+  ## Predicting using new data.
+  res <- predict(object, newdata)$predicted.val
+
+
+# MAMDANI
+library(sets)
+library(splines)
+#total_range
+sets_options("universe", seq(0,255))
+variables <- tuple(
+  SD = fuzzy_variable(NL = fuzzy_trapezoid(corners = c(-10,0,31,63)), NM = fuzzy_triangular(corners = c(31,63,95)), NS = fuzzy_triangular(corners = c(63,95,127)), ZE = fuzzy_triangular(corners = c(95,127,159)), PS = fuzzy_triangular(corners = c(127,159,191)), PM = fuzzy_triangular(corners = c(159,191,227)), PL = fuzzy_trapezoid(corners = c(191,227,255,370))),
+  AC = fuzzy_variable(NL = fuzzy_trapezoid(corners = c(-10,0,31,63)), NM = fuzzy_triangular(corners = c(31,63,95)), NS = fuzzy_triangular(corners = c(63,95,127)), ZE = fuzzy_triangular(corners = c(95,127,159)), PS = fuzzy_triangular(corners = c(127,159,191)), PM = fuzzy_triangular(corners = c(159,191,227)), PL = fuzzy_trapezoid(corners = c(191,227,255,370))),
+  TC = fuzzy_variable(NL = fuzzy_trapezoid(corners = c(-10,0,31,63)), NM = fuzzy_triangular(corners = c(31,63,95)), NS = fuzzy_triangular(corners = c(63,95,127)), ZE = fuzzy_triangular(corners = c(95,127,159)), PS = fuzzy_triangular(corners = c(127,159,191)), PM = fuzzy_triangular(corners = c(159,191,227)), PL = fuzzy_trapezoid(corners = c(191,227,255,370)))
+)
+
+# Fuzzy rules
+rules <- set(
+  fuzzy_rule(SD %is% NL && AC %is% ZE, TC %is% PL),
+  fuzzy_rule(SD %is% ZE && AC %is% NL, TC %is% PL),
+  fuzzy_rule(SD %is% NM && AC %is% ZE, TC %is% PM),
+  fuzzy_rule(SD %is% NS && AC %is% PS, TC %is% PS),
+  fuzzy_rule(SD %is% PS && AC %is% NS, TC %is% NS),
+  fuzzy_rule(SD %is% PL && AC %is% ZE, TC %is% NL),
+  fuzzy_rule(SD %is% ZE && AC %is% NS, TC %is% PS),
+  fuzzy_rule(SD %is% ZE && AC %is% NM, TC %is% PM)
+)
+
+model <- fuzzy_system(variables, rules)
+plot(model)
+
+example.1 <- fuzzy_inference(model, list(SD = 100, AC = 70))
+#membership functions
+print(example.1)
+
+#rule strength computation
+ans.1 <- gset_defuzzify(example.1, "centroid")
+ans.2 <- gset_defuzzify(example.1, "meanofmax")
+ans.3 <- gset_defuzzify(example.1, "smallestofmax")
+ans.4 <- gset_defuzzify(example.1, "largestofmax")
+
+plot(example.1)
+print("Centroid method:")
+print(ans.1)
+
+
+#COSINE
+
+
+
+get_cosine_relation  <<- function(l1,l2){
+  num = 0
+  dnm1 = 0
+  dnm2 = 0
+  for(i in 1:(length(l1))){
+    print(l1[i])
+    num = num + l1[i] * l2[i]
+    dnm1 =  dnm1 + l1[i] * l1[i]
+    dnm2 =  dnm2 + l2[i] * l2[i]
+  }
+  return(num/(sqrt(dnm1*dnm2)))
+}
+
+get_cosine_relation_mat <<- function(mat){
+  rel_mat = mat
+  for(i in 1:(length(mat)-1)){
+    rel_mat[[i]][i] = 1
+    for(j in c((i+1):length(mat))){
+      val = get_cosine_relation(mat[[i]],mat[[j]])
+      rel_mat[[i]][j] = val
+      rel_mat[[j]][i] = val
+    }
+  }
+  rel_mat[[length(mat)]][length(mat)] = 1
+  return(rel_mat)
+}
+
+
+
+
+
+
+is_reflexive <<- function(mat){
+  for(i in 1:length(mat)){
+    if(mat[[i]][[i]] != 1)
+      return(FALSE)
+  }
+  return(TRUE)
+}
+
+is_symmetric <<- function(mat){
+  for(i in 1:(length(mat)-1)){
+    for(j in c((i+1):length(mat))){
+      if(mat[[i]][[j]] != mat[[j]][[i]])
+        return(FALSE)
+    }
+  }
+  return(TRUE)
+}
+
+do_lambdacut <<- function(mat, lambda){
+  for(i in 1:length(mat)){
+    for(j in 1:length(mat)){
+      if(mat[[i]][[j]] > lambda)
+        mat[[i]][[j]] = 1
+      else
+        mat[[i]][[j]] = 0
+    }
+  }
+  return(mat)
+}
+
+
+is_transitive <<- function(mat){
+  for(i in 1:(length(mat))){
+    for(j in c(1:(length(mat)))){
+      for(k in c(1:length(mat))){
+        if(mat[[i]][[k]] < min(mat[[i]][[j]],mat[[j]][[k]]))
+          return(FALSE)
+      }
+    }
+  }
+  return(TRUE)
+}
+
+do_composition <<- function(mat){
+  mat_2 = mat
+  for(i in 1:(length(mat))){
+    for(k in c(1:length(mat))){
+      temp_list = list()
+      for(j in c(1:length(mat))){
+        temp_list[length(temp_list)+1] = min( mat[[i]][[j]] , mat[[j]][[k]] )
+      }
+      mat_2[[i]][[k]] = max(unlist(temp_list))
+    }
+  }
+  return(mat_2)
+}
+
+#equivalence class
+get_class <<- function(mat){
+  final_list = list()
+  for(i in 1:length(mat)){
+    temp_list = c()
+    for(j in 1:length(mat)){
+      if(mat[[i]][[j]] == 1)
+        temp_list[length(temp_list)+1] = j
+    }
+    final_list[[length(final_list) + 1]] = temp_list
+  }
+  return(final_list)
+}
+
+
+
+
+
+
+# mat = list(c(1,0.836,0.913,0.683,0.981),
+#            c(0.836,1,0.934,0.390,0.745),
+#            c(0.913,0.934,1,0.44,0.818),
+#            c(0.683,0.390,0.44,1,0.754),
+#            c(0.981,0.745,0.818,0.754,1))
+mat = list(c(0.3,0.6,0.1),
+           c(0.2,0.4,0.4),
+           c(0.1,0.6,0.3),
+           c(0.7,0.2,0.1),
+           c(0.6,0.4,0))
+mat = get_cosine_relation_mat(mat)
+
+
+
+if( is_reflexive(mat) && is_symmetric(mat) && !is_transitive(mat) ){
+  count = 0
+  while(!is_transitive(mat)){
+    if(count <= length(mat)-1){
+      mat = do_composition(mat)
+      count = count + 1
+    }
+    else{
+      print("not equivalence")
+      break
+    }
+  }
+}
+
+
+
+print(count)
+print("equivalence matrix")
+print(mat)
+mat = do_lambdacut(mat, 0.80)
+print("matrix after lamda cut")
+print(mat)
+print("equivalence class")
+print(get_class(mat))
+
+#MAX-MIN
+
+
+max_min_relation  <<- function(l1,l2){
+  num = 0
+  dnm = 0
+  for(i in 1:(length(l1))){
+    num = num + min(l1[i],l2[i])
+    dnm =  dnm + max(l1[i],l2[i])
+  }
+  return(num/dnm)
+}
+
+get_max_min_relation_mat <<- function(mat){
+  rel_mat = mat
+  for(i in 1:(length(mat)-1)){
+    rel_mat[[i]][i] = 1
+    for(j in c((i+1):length(mat))){
+      val = max_min_relation(mat[[i]],mat[[j]])
+      rel_mat[[i]][j] = val
+      rel_mat[[j]][i] = val
+    }
+  }
+  rel_mat[[length(mat)]][length(mat)] = 1
+  return(rel_mat)
+}
+
+
+
+
+
+
+is_reflexive <<- function(mat){
+  for(i in 1:length(mat)){
+    if(mat[[i]][[i]] != 1)
+      return(FALSE)
+  }
+  return(TRUE)
+}
+
+is_symmetric <<- function(mat){
+  for(i in 1:(length(mat)-1)){
+    for(j in c((i+1):length(mat))){
+      if(mat[[i]][[j]] != mat[[j]][[i]])
+        return(FALSE)
+    }
+  }
+  return(TRUE)
+}
+
+do_lambdacut <<- function(mat, lambda){
+  for(i in 1:length(mat)){
+    for(j in 1:length(mat)){
+      if(mat[[i]][[j]] > lambda)
+        mat[[i]][[j]] = 1
+      else
+        mat[[i]][[j]] = 0
+    }
+  }
+  return(mat)
+}
+
+
+is_transitive <<- function(mat){
+  for(i in 1:(length(mat))){
+    for(j in c(1:(length(mat)))){
+      for(k in c(1:length(mat))){
+        if(mat[[i]][[k]] < min(mat[[i]][[j]],mat[[j]][[k]]))
+          return(FALSE)
+      }
+    }
+  }
+  return(TRUE)
+}
+
+do_composition <<- function(mat){
+  mat_2 = mat
+  for(i in 1:(length(mat))){
+    for(k in c(1:length(mat))){
+      temp_list = list()
+      for(j in c(1:length(mat))){
+        temp_list[length(temp_list)+1] = min( mat[[i]][[j]] , mat[[j]][[k]] )
+      }
+      mat_2[[i]][[k]] = max(unlist(temp_list))
+    }
+  }
+  return(mat_2)
+}
+
+#equivalence class
+get_class <<- function(mat){
+  final_list = list()
+  for(i in 1:length(mat)){
+    temp_list = c()
+    for(j in 1:length(mat)){
+      if(mat[[i]][[j]] == 1)
+        temp_list[length(temp_list)+1] = j
+    }
+    final_list[[length(final_list) + 1]] = temp_list
+  }
+  return(final_list)
+}
+
+
+
+
+
+
+# mat = list(c(1,0.836,0.913,0.683,0.981),
+#            c(0.836,1,0.934,0.390,0.745),
+#            c(0.913,0.934,1,0.44,0.818),
+#            c(0.683,0.390,0.44,1,0.754),
+#            c(0.981,0.745,0.818,0.754,1))
+mat = list(c(0.3,0.6,0.1),
+           c(0.2,0.4,0.4),
+           c(0.1,0.6,0.3),
+           c(0.7,0.2,0.1),
+           c(0.6,0.4,0))
+
+mat = get_max_min_relation_mat(mat)
+
+
+
+if( is_reflexive(mat) && is_symmetric(mat) && !is_transitive(mat) ){
+  count = 0
+  while(!is_transitive(mat)){
+    if(count <= length(mat)-1){
+      mat = do_composition(mat)
+      count = count + 1
+    }
+    else{
+      print("not equivalence")
+      break
+    }
+  }
+}
+
+
+
+print(count)
+print("equivalence matrix")
+print(mat)
+mat = do_lambdacut(mat, 0.80)
+print("matrix after lamda cut")
+print(mat)
+print("equivalence class")
+print(get_class(mat))
+
+# CMEANS
+m = 2
+num_clusters = 3
+num_iterations = 10
+
+x = list()
+x = iris[-5]
+for(i in seq(1:length(x))){
+  x[i] = (x[i]-min(x[i]))/(max(x[i])-min(x[i]))
+}
+
+mu = list()
+for(i in seq(1,num_clusters)){
+  mu[[i]] = runif(n = length(x[[i]]))
+}
+
+#normalize
+for(i in seq(1,num_clusters)){
+  mu[[i]] = mu[[i]] /  Reduce("+",mu[[i]])
+}
+
+
+for(i in seq(1,num_iterations)){
+  #centroid
+  centroid = list()
+  for(i in seq(1,num_clusters)){
+    centroid[[i]] = rep(1,length(x))  #dummy initialization
+    for(j in seq(1,length(x))){
+      centroid[[i]][j] = sum(mu[[i]]^m*x[[j]])/sum(mu[[i]]^m)
+    }
+  }
+ 
+  #distance
+  dist = list()
+  for(i in seq(1,num_clusters)){
+    dist[[i]] = rep(0,length(x[[1]]))  #dummy initialization
+    for(j in seq(1,length(x))){
+      dist[[i]] = dist[[i]] + (centroid[[i]][j]-x[[j]])^2
+    }
+    dist[[i]] = 1 / sqrt(dist[[i]]) #reciprocal also done
+  }
+ 
+ 
+  #membership
+  for(i in seq(1,num_clusters)){
+    mu[[i]] = (  dist[[i]]^(1/(m-1)) ) / ( Reduce("+",dist)^(1/(m-1)) )
+  }
+}
+
+
+
+#print
+df = data.frame(x,mu)
+
+for(i in seq(1,length(x))){
+  colnames(df)[i] = paste("x",i,sep="")
+}
+for(i in seq(1,num_clusters)){
+  colnames(df)[i+length(x)] = paste("mu",i,sep="")
+}
+
+c = colnames(df[(length(x)+1):(length(x)+num_clusters)])[apply(df[(length(x)+1):(length(x)+num_clusters)],1,which.max)]
+df = cbind(df,c)
+print(df)
